@@ -14,8 +14,8 @@ type CreatedFile = {
   id: number;
   path: string;
   size: number;
-  isDuplicate: boolean;
   duplicateOf: string[];
+  samePathCount: number;
 };
 
 const formatSize = (bytes: number) => {
@@ -60,7 +60,7 @@ export function UploadFiles() {
         body: formData,
       });
     }
-    // Rafraîchir la liste après upload
+    // Refresh list after upload
     fetchFiles();
   }, [fetchFiles]);
 
@@ -109,9 +109,14 @@ export function UploadFiles() {
               >
                 <div className="flex items-center gap-2">
                   <span>{fileName}</span>
-                  {file.isDuplicate && (
+                  {file.duplicateOf.length > 0 && (
                     <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded">
-                      Doublon
+                      Duplicate
+                    </span>
+                  )}
+                  {file.samePathCount > 1 && (
+                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                      Re-upload
                     </span>
                   )}
                 </div>
@@ -120,6 +125,7 @@ export function UploadFiles() {
 
               {isExpanded && (
                 <div className="border-t bg-gray-50 p-3 text-sm">
+                  <div className="text-gray-500 mb-1">Tree:</div>
                   <div className="font-mono text-gray-600">
                     {parts.map((part, i) => (
                       <div key={i} style={{ paddingLeft: `${i * 16}px` }}>
@@ -128,11 +134,16 @@ export function UploadFiles() {
                     ))}
                   </div>
                   <div className="mt-3 text-gray-500">
-                    Taille: {formatSize(file.size)}
+                    Size: {formatSize(file.size)}
                   </div>
-                  {file.isDuplicate && file.duplicateOf.length > 0 && (
+                  {file.duplicateOf.length > 0 && (
                     <div className="mt-1 text-orange-600">
-                      Identique à: {file.duplicateOf.join(", ")}
+                      Identical to: {file.duplicateOf.join(", ")}
+                    </div>
+                  )}
+                  {file.samePathCount > 1 && (
+                    <div className="mt-1 text-blue-600">
+                      Uploaded {file.samePathCount} times
                     </div>
                   )}
                 </div>

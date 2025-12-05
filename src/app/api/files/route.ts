@@ -12,12 +12,15 @@ export async function GET() {
         .from(files)
         .where(eq(files.processedFile, file.processedFile!));
 
-      const duplicatePaths = duplicates.map((d) => d.path);
+      const samePathCount = duplicates.filter((d) => d.path === file.path).length;
+      const otherPaths = [...new Set(duplicates.map((d) => d.path))].filter(
+        (p) => p !== file.path
+      );
 
       return {
         ...file,
-        isDuplicate: duplicatePaths.length > 1,
-        duplicateOf: duplicatePaths,
+        duplicateOf: otherPaths,
+        samePathCount,
       };
     })
   );
