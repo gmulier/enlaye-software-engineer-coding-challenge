@@ -11,6 +11,11 @@ export const users = sqliteTable("users", {
   email: text().notNull().unique(),
 });
 
+export const processed_files = sqliteTable("processed_files", {
+  id: integer().primaryKey({ autoIncrement: true }),
+  hashCode: text().notNull(),
+});
+
 export const files = sqliteTable(
   "files",
   {
@@ -18,11 +23,17 @@ export const files = sqliteTable(
     ownerId: integer("owner_id").notNull(),
     path: text().notNull(),
     size: integer().notNull(),
+    processedFile: integer(),
   },
   (table) => [
     foreignKey({
       columns: [table.ownerId],
       foreignColumns: [users.id],
     }),
+    foreignKey({
+      columns: [table.processedFile],
+      foreignColumns: [processed_files.id],
+    }),
   ]
 );
+
