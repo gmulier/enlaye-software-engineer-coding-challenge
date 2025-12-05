@@ -1,3 +1,10 @@
+import { UploadFiles } from "./UploadFiles";
+
 export default function Home() {
-  return <div><h1>Files</h1></div>;
+  return (
+    <div className="container mx-auto px-4 py-10">
+      <h1 className="text-2xl font-bold mb-6">Enlaye Files</h1>
+      <UploadFiles />
+    </div>
+  );
 }

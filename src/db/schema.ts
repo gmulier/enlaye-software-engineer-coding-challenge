@@ -1,4 +1,9 @@
-import { sqliteTable, text, integer, foreignKey } from "drizzle-orm/sqlite-core";
+import {
+  foreignKey,
+  integer,
+  sqliteTable,
+  text,
+} from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable("users", {
   id: integer().primaryKey({ autoIncrement: true }),
@@ -6,13 +11,18 @@ export const users = sqliteTable("users", {
   email: text().notNull().unique(),
 });
 
-export const files = sqliteTable("files", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  ownerId: integer().notNull(),
-  path: text().notNull(),
-}, (table) => [
-  foreignKey({
-    columns: [table.ownerId],
-    foreignColumns: [users.id],
-  }),
-]);
+export const files = sqliteTable(
+  "files",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    ownerId: integer("owner_id").notNull(),
+    path: text().notNull(),
+    size: integer().notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.ownerId],
+      foreignColumns: [users.id],
+    }),
+  ]
+);
