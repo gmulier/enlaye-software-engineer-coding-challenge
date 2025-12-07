@@ -152,8 +152,8 @@ function FolderNode({ node, depth, selectedPath, onSelect }: {
           {node.stats && node.stats.versionedCount > 0 ? <Badge value={node.stats.versionedCount} color="blue" /> : <Empty />}
         </span>
       </div>
-      {expanded && node.children && (
-        <div>
+      {node.children && (
+        <div className={expanded ? '' : 'hidden'}>
           {node.children.map(child => (
             <TreeNodeRow key={child.name} node={child} depth={depth + 1} selectedPath={selectedPath} onSelect={onSelect} />
           ))}

@@ -6,7 +6,7 @@ import { FileBrowser } from "./components/FileBrowser";
 import { FileResponse } from "./components/FileSystem";
 
 export default function Home() {
-  const [files, setFiles] = useState<FileResponse[]>([]);
+  const [files, setFiles] = useState<FileResponse[] | null>(null);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
 
   const fetchFiles = useCallback(async () => {
@@ -39,11 +39,13 @@ export default function Home() {
 
       <UploadFiles onUploadComplete={fetchFiles} />
 
-      <FileBrowser
-        files={files}
-        selectedPath={selectedPath}
-        onSelect={setSelectedPath}
-      />
+      {files && (
+        <FileBrowser
+          files={files}
+          selectedPath={selectedPath}
+          onSelect={setSelectedPath}
+        />
+      )}
     </div>
   );
 }
