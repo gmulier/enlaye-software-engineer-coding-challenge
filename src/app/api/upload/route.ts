@@ -1,64 +1,103 @@
-import { db, files, processed_files, users } from "@/db";
+import { db, files, file_versions, processed_files, users } from "@/db";
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { eq } from "drizzle-orm";
 
 const USER_ID = 1;
 
+async function getOrCreateProcessedFile(hash: string): Promise<number> {
+  await db
+    .insert(processed_files)
+    .values({ hashCode: hash })
+    .onConflictDoNothing();
+
+  const [file] = await db
+    .select()
+    .from(processed_files)
+    .where(eq(processed_files.hashCode, hash))
+    .limit(1);
+
+  return file.id;
+}
+
+async function insertVersion(fileId: number, processedFileId: number, size: number) {
+  await db.insert(file_versions).values({ fileId, processedFileId, size });
+}
+
+async function createFileWithVersion(path: string, processedFileId: number, size: number) {
+  const [newFile] = await db
+    .insert(files)
+    .values({ path, ownerId: USER_ID })
+    .returning();
+
+  await insertVersion(newFile.id, processedFileId, size);
+}
+
+async function generateCopyPath(originalPath: string): Promise<string> {
+  const parts = originalPath.split('/');
+  const fileName = parts[parts.length - 1];
+  const basePath = parts.slice(0, -1).join('/');
+
+  const dotIndex = fileName.lastIndexOf('.');
+  const name = dotIndex > 0 ? fileName.slice(0, dotIndex) : fileName;
+  const ext = dotIndex > 0 ? fileName.slice(dotIndex) : '';
+
+  let counter = 1;
+  let newPath: string;
+
+  do {
+    const newFileName = `${name} (${counter})${ext}`;
+    newPath = basePath ? `${basePath}/${newFileName}` : newFileName;
+
+    const [existing] = await db
+      .select()
+      .from(files)
+      .where(eq(files.path, newPath))
+      .limit(1);
+
+    if (!existing) break;
+    counter++;
+  } while (counter < 100);
+
+  return newPath;
+}
+
 export async function POST(request: NextRequest) {
   await assertUserExists();
 
   const formData = await request.formData();
-  const formFile = formData.get("file") as File | null;
+  const formFile = formData.get("file") as File;
   const path = formData.get("path") as string;
+  const mode = formData.get("mode") as "replace" | "copy" | null;
 
-  if (!formFile) {
-    return NextResponse.json({ message: "No file uploaded" }, { status: 400 });
-  }
+  const buffer = Buffer.from(await formFile.arrayBuffer());
+  const checksumHash = createHash("sha256").update(buffer).digest("hex");
 
-  await db
-    .insert(users)
-    .values({
-      id: 1,
-      email: "test@test.com",
-      name: "Test User",
-    })
-    .onConflictDoNothing();
+  const processedFileId = await getOrCreateProcessedFile(checksumHash);
 
-  const checksumHash = await createHash("sha256")
-
-    .update(Buffer.from(await formFile.arrayBuffer()))
-
-    .digest("hex");
-
-  let processedFileId: number;
-
-  const existing = await db
+  const [existingFile] = await db
     .select()
-    .from(processed_files)
-    .where(eq(processed_files.hashCode, checksumHash));
+    .from(files)
+    .where(eq(files.path, path))
+    .limit(1);
 
-  if (existing.length > 0) {
-    processedFileId = existing[0].id;
-  } else {
-    const [createdHash] = await db
-      .insert(processed_files)
-      .values({ hashCode: checksumHash })
-      .returning();
-    processedFileId = createdHash.id;
+  if (!existingFile) {
+    await createFileWithVersion(path, processedFileId, formFile.size);
+    return NextResponse.json({ success: true });
   }
 
-  const [createdFile] = await db
-    .insert(files)
-    .values({
-      ownerId: 1,
-      path,
-      size: formFile.size,
-      processedFile: processedFileId,
-    })
-    .returning();
+  if (!mode) {
+    return NextResponse.json({ conflict: true }, { status: 409 });
+  }
 
-  return NextResponse.json({ createdFile });
+  if (mode === "replace") {
+    await insertVersion(existingFile.id, processedFileId, formFile.size);
+    return NextResponse.json({ success: true });
+  }
+
+  const newPath = await generateCopyPath(path);
+  await createFileWithVersion(newPath, processedFileId, formFile.size);
+  return NextResponse.json({ success: true, newPath });
 }
 
 const assertUserExists = () =>
