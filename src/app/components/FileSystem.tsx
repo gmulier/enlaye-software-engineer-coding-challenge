@@ -11,7 +11,9 @@ import {
   FileVideo,
   FileSpreadsheet,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  Copy,
+  History
 } from 'lucide-react';
 
 export type FileVersion = {
@@ -74,21 +76,6 @@ export function FileIcon({ name, type, expanded, className = "h-4 w-4" }: { name
 
 const GRID_COLS = 'grid grid-cols-[1fr_100px_70px_70px_70px] items-center gap-2 px-2 py-1';
 
-function Badge({ value, color }: { value: number; color: 'orange' | 'blue' }) {
-  const colors = color === 'orange'
-    ? 'bg-orange-100 text-orange-600'
-    : 'bg-blue-100 text-blue-600';
-  return (
-    <span className={`inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[10px] font-medium ${colors}`}>
-      {value}
-    </span>
-  );
-}
-
-function Dot() {
-  return <span className="inline-block w-2.5 h-2.5 bg-orange-400 rounded-full" />;
-}
-
 const Empty = () => <span className="text-gray-300">--</span>;
 
 // Composant fichier
@@ -114,10 +101,10 @@ function FileNode({ node, depth, isSelected, onSelect }: {
       <span className="text-xs text-gray-500">{data ? formatDate(data.uploadedAt) : '--'}</span>
       <span className="text-xs text-gray-500">{data ? formatSize(data.size) : '--'}</span>
       <span className="text-xs text-center">
-        {data && data.duplicateOf.length > 0 ? <Dot /> : <Empty />}
+        {data && data.duplicateOf.length > 0 ? <Copy className="h-3 w-3 text-gray-400 mx-auto" /> : <Empty />}
       </span>
-      <span className="text-xs text-center">
-        {data && data.versions.length > 1 ? <Badge value={data.versions.length} color="blue" /> : <Empty />}
+      <span className="text-xs text-center text-gray-400">
+        {data && data.versions.length > 1 ? `v${data.versions.length}` : <Empty />}
       </span>
     </div>
   );
@@ -146,10 +133,20 @@ function FolderNode({ node, depth, selectedPath, onSelect }: {
         <Empty />
         <Empty />
         <span className="text-xs text-center">
-          {node.stats && node.stats.duplicateCount > 0 ? <Badge value={node.stats.duplicateCount} color="orange" /> : <Empty />}
+          {!expanded && node.stats && node.stats.duplicateCount > 0 ? (
+            <span className="inline-flex items-center gap-2 text-gray-400">
+              <Copy className="h-3 w-3" />
+              <span>{node.stats.duplicateCount}</span>
+            </span>
+          ) : <Empty />}
         </span>
         <span className="text-xs text-center">
-          {node.stats && node.stats.versionedCount > 0 ? <Badge value={node.stats.versionedCount} color="blue" /> : <Empty />}
+          {!expanded && node.stats && node.stats.versionedCount > 0 ? (
+            <span className="inline-flex items-center gap-2 text-gray-400">
+              <History className="h-3 w-3" />
+              <span>{node.stats.versionedCount}</span>
+            </span>
+          ) : <Empty />}
         </span>
       </div>
       {node.children && (
